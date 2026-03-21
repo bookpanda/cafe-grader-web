@@ -82,11 +82,14 @@ Rails.application.configure do
   config.active_record.attributes_for_inspect = [ :id ]
 
   # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  #
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # Leading dot = any subdomain of utah.cloudlab.us; Rails also allows optional :port.
+  config.hosts << ".utah.cloudlab.us"
+  # Judge process downloads attachments via Net::HTTP to loopback (see config/worker.yml hosts.web).
+  # Without these, only the browser Host (e.g. *.utah.cloudlab.us) is allowed and worker/* is blocked.
+  config.hosts << "127.0.0.1"
+  config.hosts << "localhost"
+  # Worker API is still protected by x-api-key (WorkerController#worker_authenticity).
+  config.host_authorization = {
+    exclude: ->(request) { request.path == "/up" || request.path.start_with?("/worker/") }
+  }
 end

@@ -48,7 +48,7 @@ module JudgeBase
 
   def isolate_need_cg_by_lang(language_name)
     case language_name
-    when 'java', 'digital', 'go', 'python'
+    when 'java', 'digital', 'go', 'python', 'verilog'
       true
     else
       false
@@ -74,6 +74,8 @@ module JudgeBase
       '-p -d /gocache:tmp --env=GOCACHE=/gocache'
     when 'postgres'
       '-p --share-net'
+    when 'verilog'
+      '-p'
     else
       ''
     end
@@ -82,7 +84,7 @@ module JudgeBase
   # return true when we must redirect the input into stdin
   def input_redirect_by_lang(language_name)
     case language_name
-    when 'digital'
+    when 'digital', 'verilog'
       return false
     else
       return true
@@ -217,10 +219,11 @@ module JudgeBase
         download_from_web(url, dest, download_type: 'initializer', chmod_mode: 'a+x')
       end
 
-      # download any data
+      # download any data (preserve relative paths e.g. cocotb/tests/foo.py)
       dataset.data_files.each do |data_file|
-        basename = data_file.filename.base + data_file.filename.extension_with_delimiter
-        dest = @prob_data_path + basename
+        rel = data_file.filename.to_s
+        dest = rel.include?('/') ? (@prob_data_path + rel) : (@prob_data_path + (data_file.filename.base + data_file.filename.extension_with_delimiter))
+        dest.dirname.mkpath
         url = Rails.configuration.worker[:hosts][:web]+worker_get_attachment_path(data_file.id)
         download_from_web(url, dest, download_type: 'data_file')
       end
